@@ -13,17 +13,26 @@
             <input type="text" id="myInput" placeholder="Type something...">
             <button id="findButton">Find</button>
         </div>
-        
-        <div id="results">
-            <h1>Search Results</h1>
+        <div id="songArea">
+            <h1>Songs</h1>
+            <div id="songs" class="index">
+            </div>
         </div>
 
-        <div id="songs" class="index">
-            <h1>Songs</h1>
+        <div id="resultsArea">
+            <h1>Found</h1>
+            <div id="results">
+            </div>
         </div>
-        
-        <div id="lyrics">
-            <h1>Lyrics</h1>
+
+        <div id="lyricsArea">
+            <div class="oneline">
+                <button id="indexButton" class="myButton">Songs</button>
+                <h1>Lyrics</h1>
+                <button id="searchButton" class="myButton">Found</button>
+            </div>
+            <div id="lyrics">
+            </div>
         </div>
 
         <div id="toast" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:12px 20px; border-radius:25px; display:none; z-index:1000;"></div>

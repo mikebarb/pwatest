@@ -23,6 +23,34 @@ body {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+.oneline{
+    display: flex;
+    justify-content: space-between; /* This spreads items evenly */
+    align-items: center; /* Vertically center items */
+    width: 100%; /* Ensure container takes full width */
+}
+
+.oneline2{
+    display: grid;
+    grid-template-columns: auto auto auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.hideme {
+    display: none;
+}
+
+.hidemekeepspace {
+    visibility: hidden;
+}
+
+.highlightme {
+    /*background-color: rgb(129, 228, 246);
+    transition: background-color 0.5s ease; */
+    border: 4px solid yellow;
+}
+
 /* Header styles */
 h1 {
     color: #2c3e50;
@@ -30,29 +58,24 @@ h1 {
     text-align: center;
 }
 
-/* Last line of verse to have bottom margin */
-p.verseLastLine {
-    margin-bottom: 15px;
-}   
-
 /* Button styles */
-#myButton {
+.myButton {
     background-color: #3498db;
     color: white;
-    padding: 12px 24px;
+    padding: 4px 4px;
     border: none;
-    border-radius: 4px;
+    border-radius: 2px;
     cursor: pointer;
     font-size: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     transition: background-color 0.3s ease;
 }
 
-#myButton:hover {
+.myButton:hover {
     background-color: #2980b9;
 }
 
-#myButton:active {
+.myButton:active {
     transform: translateY(1px);
 }
 
@@ -94,28 +117,46 @@ p.verseLastLine {
     }
 }
 
-/* fizzy search hightlighting */
-.highlight {
-    background-color: yellow;
-    color: black;
-    font-weight: bold;
-    padding: 0 2px;
-    border-radius: 3px;
-}
+/* Last line of verse to have bottom margin */
+p.verseLastLine {
+    margin-bottom: 15px;
+}   
 
-/* Alternative styles */
-.highlight.match {
+/* fuzzy search hightlighting */
+.fuzzy-highlight {
     background: linear-gradient(120deg, #ffeb3b 0%, #ffeb3b 100%);
-}
-
-.highlight.strong {
-    background-color: #ff6b6b;
-    color: white;
+    color: #000;
+    font-weight: bold;
+    padding: 0 1px;
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .search-result {
-    margin: 5px 0;
-    padding: 8px;
-    border-left: 3px solid #4CAF50;
-    background: #f8f9fa;
+    /*border: 1px solid #e0e0e0; */
+    margin: 8px 0;
+    padding: 12px;
+    border-radius: 6px;
+    background: #fafafa;
+    transition: all 0.2s ease;
 }
+
+.search-result:hover {
+    background: #f0f0f0;
+    border-color: #ccc;
+    transform: translateY(-1px);
+}
+
+.result-score {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+}
+
+.result-field {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
