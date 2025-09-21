@@ -160,3 +160,26 @@ p.verseLastLine {
     letter-spacing: 0.5px;
 }
 
+/*
+Need to handle the search text field with search button
+It needs to viewable when we have scrollable content
+*/
+.fixed-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #ffffff;
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    transition: transform 0.3s ease; /* Smooth hide/show animation */
+}
+
+.content {
+    margin-top: 20px; /* Initial margin for visible header */
+    padding: 2rem;
+    transition: margin-top 0.3s ease; /* Smooth content adjustment */
+}
+
+

@@ -9,29 +9,33 @@
     </head>
 
     <body>
-        <div id="inputContainer">
-            <input type="text" id="myInput" placeholder="Type something...">
-            <button id="findButton">Find</button>
-        </div>
-        <div id="songArea">
-            <h1>Songs</h1>
-            <div id="songs" class="index">
+        <div id="headerContainer">
+            <div id="inputContainer" class="fixed-header">
+                <input type="text" id="myInput" placeholder="Type something...">
+                <button id="findButton">Find</button>
             </div>
         </div>
+        <div id="contentContainer" class="content">
+            <div id="songArea">
+                <h1>Songs</h1>
+                <div id="songs" class="index">
+                </div>
+            </div>
 
-        <div id="resultsArea">
-            <h1>Found</h1>
-            <div id="results">
+            <div id="resultsArea">
+                <h1>Found</h1>
+                <div id="results">
+                </div>
             </div>
-        </div>
 
-        <div id="lyricsArea">
-            <div class="oneline">
-                <button id="indexButton" class="myButton">Songs</button>
-                <h1>Lyrics</h1>
-                <button id="searchButton" class="myButton">Found</button>
-            </div>
-            <div id="lyrics">
+            <div id="lyricsArea">
+                <div class="oneline">
+                    <button id="indexButton" class="myButton">Songs</button>
+                    <h1>Lyrics</h1>
+                    <button id="searchButton" class="myButton">Found</button>
+                </div>
+                <div id="lyrics">
+                </div>
             </div>
         </div>
 

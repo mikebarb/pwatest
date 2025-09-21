@@ -71,17 +71,24 @@ function initializeApp() {
 
 function displayScreen(){
     if (activeArea === "songArea"){      // index area - list of songs
-        document.getElementById('inputContainer').classList.remove("hideme");
+        //document.getElementById('inputContainer').classList.remove("hideme");
+        showSearch();
         document.getElementById('songArea').classList.remove("hideme");
         document.getElementById('resultsArea').classList.add("hideme") ;
         document.getElementById('lyricsArea').classList.add("hideme");
+        const thisElement = document.getElementById('s' + currentSong);
+        if(thisElement){
+            viewElement(thisElement);
+        }
     }else if (activeArea === "resultsArea"){   // search results
-        document.getElementById('inputContainer').classList.remove("hideme");
+        //document.getElementById('inputContainer').classList.remove("hideme");
+        showSearch();
         document.getElementById('songArea').classList.add("hideme");
         document.getElementById('resultsArea').classList.remove("hideme");
         document.getElementById('lyricsArea').classList.add("hideme");
     }else if (activeArea === "lyricsArea"){
-        document.getElementById('inputContainer').classList.add("hideme");
+        //document.getElementById('inputContainer').classList.add("hideme");
+        hideSearch();
         document.getElementById('songArea').classList.add("hideme");
         document.getElementById('resultsArea').classList.add("hideme");
         document.getElementById('lyricsArea').classList.remove("hideme");
@@ -92,6 +99,43 @@ function displayScreen(){
             document.getElementById('searchButton').classList.add("hidemekeepspace");
         }
     }
+}
+
+// hide and show the search fields and allow page content to use all the page.
+//function toggleHeader() {
+//    const body = document.body;
+//    body.classList.toggle('header-hidden');
+//}
+
+// Alternative: Hide header container completely
+function hideSearch() {
+    //const headerContainer = document.getElementById('headerContainer');
+    //const contentContainer = document.getElementById('contentContainer');
+    //document.getElementById('headerContainer').style.display = 'none';
+    document.getElementById('headerContainer').classList.add("hideme");
+    document.getElementById('contentContainer').style.marginTop = '0';
+}
+
+function showSearch() {
+    //const headerContainer = document.getElementById('headerContainer');
+    //const contentContainer = document.getElementById('contentContainer');
+    //document.getElementById('headerContainer').style.display = 'block';
+    document.getElementById('headerContainer').classList.remove("hideme");
+    document.getElementById('contentContainer').style.marginTop = '20px'; // Adjust to header height
+}
+
+//const element = document.getElementById('myElement');
+//element.scrollIntoView();
+// Bring this element to be viewable on the screen
+//viewElement(thisElement);
+
+// With options for smooth scrolling and positioning
+function viewElement(element){
+    element.scrollIntoView({
+        behavior: 'smooth', // 'auto' or 'smooth'
+        block: 'center',    // 'start', 'center', 'end', or 'nearest'
+        inline: 'nearest'   // 'start', 'center', 'end', or 'nearest'
+    });
 }
 
 function setCurrentSong(num){
