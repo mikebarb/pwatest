@@ -9,15 +9,13 @@ let fromArea = "";  // where the current display came from - index, search, etc.
 let startX, startY, endX, endY;
 
 // Get DOM elements for scanner code
-const resultInput = document.getElementById('barcode-result');
-const toggleButton = document.getElementById('scan-toggle');
-const scannerContainer = document.getElementById('scanner-container');
 
 // Variables to hold the scanner instance and its state
 let html5QrcodeScanner = null;
 let isScannerActive = false;
-let cameraId = null;
-
+let isPaused = false;
+let currentCameraStream = null;
+let isResuming = false;
 
 //window.appGlobalMap = new Map(); // For browser
 let songMapByNumber = new Map();
@@ -58,14 +56,12 @@ function initializeApp() {
     // the two buttons at the top of the Lyrics page
     document.getElementById('indexButton').addEventListener('click', indexButtonClick);
     document.getElementById('searchButton').addEventListener('click', searchButtonClick);
-    //<button id="startBtn" onclick="startPersistentScanner()">Start Scanner</button>
-    //<button id="stopBtn" onclick="stopScanner()" disabled>Stop Scanner</button>
-    //<button id="pauseBtn" onclick="pauseScanner()" disabled>Pause Scanner</button>
-    //<button id="resumeBtn" onclick="resumeScanner()" disabled>Resume Scanner</button>
-    document.getElementById('startBtn').addEventListener('click', startPersistentScanner);
-    document.getElementById('stopBtn').addEventListener('click', stopScanner);
+    // the buttons to control the scanner
+    document.getElementById('startBtn').addEventListener('click', startScanner);
     document.getElementById('pauseBtn').addEventListener('click', pauseScanner);
     document.getElementById('resumeBtn').addEventListener('click', resumeScanner);
+    document.getElementById('stopBtn').addEventListener('click', stopScanner);
+
     // Notes:
     // event.target = element actually clicked
     // event.currentTarget = element where the event listener is
@@ -109,16 +105,15 @@ function initializeApp() {
 
     // Scanner related code
 
-    // Initialize the scanner (runs only once)
-    async function initScanner() {
+    // Initialize scanner
+    function initScanner() {
         if (html5QrcodeScanner) return html5QrcodeScanner;
         
-        // Create scanner instance
         html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader",
-            {
+            "reader", 
+            { 
                 fps: 10,
-                qrbox: { width: 250, height: 250 },
+                qrbox: 250,
                 rememberLastUsedCamera: true
             },
             false
@@ -127,117 +122,254 @@ function initializeApp() {
         return html5QrcodeScanner;
     }
 
-    // Start scanner with persistent session
-    async function startPersistentScanner() {
+    // Start scanner
+    async function startScanner() {
         try {
-            const scanner = await initScanner();
-            if (isScannerActive) {
-                console.log('Scanner already running');
+            if (isScannerActive && !isPaused) return;
+            
+            const scanner = initScanner();
+            
+            if (isPaused) {
+                // Resume from paused state
+                await resumeScanner();
                 return;
             }
 
-            // Get list of cameras to remember which one we're using
-            const cameras = await Html5Qrcode.getCameras();
-            if (cameras && cameras.length > 0) {
-                cameraId = cameras[0].id; // Use first camera or remember user choice
-            }
-
-            // Start scanning - this will only show permission banner on first run
+            // First time start
             await scanner.render(onScanSuccess, onScanFailure);
             
             isScannerActive = true;
+            isPaused = false;
             updateButtonStates();
             
         } catch (error) {
             console.error('Failed to start scanner:', error);
-            alert('Camera access denied or unavailable');
+            handleCameraError(error);
         }
     }
 
-    // Pause scanning (keep camera session alive)
+    // Pause scanner (keep camera alive)
     async function pauseScanner() {
-        if (!html5QrcodeScanner || !isScannerActive) return;
+        if (!isScannerActive || isPaused || isResuming) return;
         
         try {
-            // html5-qrcode@2.3.8 doesn't have direct pause method
-            // We'll stop the scanner but remember the camera
-            await html5QrcodeScanner.clear();
-            isScannerActive = false;
+            // Get the video element
+            const videoElement = document.querySelector('#reader video');
+            if (videoElement && videoElement.srcObject) {
+                // Store the stream for later resumption
+                currentCameraStream = videoElement.srcObject;
+                
+                // Stop the video playback but keep stream available
+                // Properly disable tracks instead of just pausing
+                const tracks = currentCameraStream.getTracks();
+                tracks.forEach(track => {
+                    track.enabled = false
+                });
+                // Remove from video element gracefully
+                videoElement.srcObject = null;
+                videoElement.load();    // proper cleanup
+            }
+            
+            // Stop the scanning logic safely but don't clear the scanner
+            if (html5QrcodeScanner && html5QrcodeScanner._html5Qrcode) {
+                try{
+                html5QrcodeScanner._html5Qrcode.stop();
+                } catch (e){
+                    console.log('Graceful stop during pause', e.message);
+                }
+            }
+            
+            isPaused = true;
             updateButtonStates();
+            
+            console.log('Scanner paused safely (camera session maintained)');
             
         } catch (error) {
             console.error('Error pausing scanner:', error);
+            // If pause fails, do a full stop
+            await stopScanner();
         }
     }
 
-    // Resume scanning (no permission prompt)
+    // Resume scanner (no permission prompt)
+    // Safe resume function with retry logic
     async function resumeScanner() {
-        if (isScannerActive) return;
-        
+        if (!isPaused || isResuming) return;
+        isResuming = true;
+        updateButtonStates();
         try {
-            // Re-render with the same camera - no new permission request
-            await html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-            isScannerActive = true;
-            updateButtonStates();
+            if (!currentCameraStream) {
+                throw new Error('No camera stream to resume');
+            }
+            const videoElement = document.querySelector('#reader video');
+            if (!videoElement) {
+                throw new Error('Video element not found');
+            }
+            // Check if stream tracks are still valid
+            const tracks = currentCameraStream.getTracks();
+            const allTracksValid = tracks.every(track => track.readyState === 'live');
+            if (!allTracksValid) {
+                console.log("Stream tracks invalid, restarting scanner");
+            }
+            if (videoElement && currentCameraStream) {
+                await stopScanner();
+                await startScanner();
+                isResuming = false;
+                return;
+            }
+
+            // Re-enable tracks
+            tracks.forEach(track => {
+                track.enabled = true;
+            });
+
+            // Restore stream to video element
+            videoElement.srcObject = currentCameraStream;
+
+            // wait for video to be ready
+            await new Promise((resolve) => {
+                videoElement.onloadedmetadata = resolve;
+                setTimeout(resolve, 1000); // Fallback timeout
+            });
+            
+            await videoElement.play();
+
+            // Restart scanning logic
+            if (html5QrcodeScanner && html5QrcodeScanner._html5Qrcode) {
+                await html5QrcodeScanner._html5Qrcode.start(
+                    currentCameraStream,
+                    { fps: 10, qrbox: 250 },
+                    onScanSuccess,
+                    onScanFailure
+                );
+            }
+            
+            isPaused = false;
+            console.log('Scanner resumed (no permission prompt)');
             
         } catch (error) {
             console.error('Error resuming scanner:', error);
+            // Fallback: full restart if resume fails
+            await stopScanner();
+            await startScanner();
+        } finally {
+            isResuming = false;
+            updateButtonStates();
         }
     }
 
-    // Completely stop and clean up
+    // Stop scanner completely
     async function stopScanner() {
-        if (!html5QrcodeScanner) return;
-        
+        //if (!html5QrcodeScanner) return;
         try {
-            await html5QrcodeScanner.clear();
-            html5QrcodeScanner = null;
-            isScannerActive = false;
-            cameraId = null;
-            updateButtonStates();
-            
+            // clean up video element first
+            const videoElement = document.querySelector('#reader video');
+            if(videoElement){
+                videoElement.srcObject = null;
+                videoElement.load();
+            }
+
+            // stop and clear scanner
+            if(html5QrcodeScanner){
+                await html5QrcodeScanner.clear();
+                html5QrcodeScanner = null;
+            }
+            // properly stop camera stream if it exists
+            if(currentCameraStream){
+                const tracks = currentCameraStream.getTracks();
+                tracks.forEach(track => {
+                    track.stop();
+                });
+                currentCameraStream = null;
+            }
         } catch (error) {
             console.error('Error stopping scanner:', error);
+        } finally {
+            isScannerActive = false;
+            isPaused = false;
+            updateButtonStates();
         }
     }
 
-    // Scan success callback
-    function onScanSuccess(decodedText, decodedResult) {
-        console.log(`Scan successful: ${decodedText}`);
-        document.getElementById('scan-result').innerHTML = `
-            <strong>Scanned:</strong> ${decodedText}<br>
-            <strong>Format:</strong> ${decodedResult.result.format?.formatName || 'Unknown'}<br>
-            <small>${new Date().toLocaleTimeString()}</small>
-        `;
+    // Error handling for camera issues
+    function handleCameraError(error) {
+        console.error('Camera error:', error);
+        console.error('Camera error: ', error);
         
-        // Optional: Add haptic feedback or sound
-        if (navigator.vibrate) navigator.vibrate(100);
+        let userMessage = 'Camera error occurred';
+        if(error.message.includes('Permission')){
+            userMessage = 'Camer access denied. Please check browser permissions.';
+        }else if(error.message.includes('NotFound')){
+            userMessage = 'No camera found on this device';
+        }else if(error.message.includes('NotReadable')){
+            userMessage = 'Camera is in use by another application';
+        }else if(error.message.includes('Abort')){
+            userMessage = 'Camera connection was interrupted';
+        }
+        // Show user friendly error
+        const errorElement = document.getElementById('errorMessage');
+        if(errorElement){
+            errorElement.textContent = userMessage;
+            errorElement.style.display = 'block';
+            // auto-hide after 5 seconds
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+        // Reset state on error
+        isScannerActive = false;
+        isPaused = false;
+        updateButtonStates();
     }
 
-    // Scan failure callback (mostly noise, can be ignored)
-    function onScanFailure(error) {
-        // Expected errors - no barcode found, etc.
-        // console.log('Scan failed (expected):', error);
-    }
+
 
     // Update UI states
     function updateButtonStates() {
-        document.getElementById('startBtn').disabled = isScannerActive;
-        document.getElementById('stopBtn').disabled = !html5QrcodeScanner;
-        document.getElementById('pauseBtn').disabled = !isScannerActive;
-        document.getElementById('resumeBtn').disabled = isScannerActive || !html5QrcodeScanner;
+        document.getElementById('startBtn').disabled = isScannerActive && !isPaused;
+        document.getElementById('pauseBtn').disabled = !isScannerActive || isPaused || isResuming;
+        document.getElementById('resumeBtn').disabled = !isPaused || isResuming;
+        document.getElementById('stopBtn').disabled = !isScannerActive && !isPaused;
+        
+        // Update status display
+        const statusElement = document.getElementById('scannerStatus');
+        if (statusElement) {
+            if (isResuming) {
+                statusElement.textContent = 'Status: Resuming...';
+                statusElement.style.color = '#ff9800';
+            } else if (isPaused) {
+                statusElement.textContent = 'Status: Paused';
+                statusElement.style.color = '#ff9800';
+            } else if (isScannerActive) {
+                statusElement.textContent = 'Status: Scanning';
+                statusElement.style.color = '#4caf50';
+            } else {
+                statusElement.textContent = 'Status: Stopped';
+                statusElement.style.color = '#f44336';
+            }
+        }
     }
 
-    // Handle page visibility changes (optional)
+    // Handle page visibility changes
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden && isScannerActive) {
-            // Page hidden - pause scanner to save resources
+        if (document.hidden && isScannerActive && !isPaused) {
+            // Auto-pause when app goes to background
             pauseScanner();
-        } else if (!document.hidden && html5QrcodeScanner && !isScannerActive) {
-            // Page visible again - resume if we had an active session
+        } else if (!document.hidden && isPaused) {
+            // Auto-resume when app comes to foreground
             resumeScanner();
         }
     });
+
+    // Scan callbacks
+    function onScanSuccess(decodedText, decodedResult) {
+        document.getElementById('result').textContent = decodedText;
+        if (navigator.vibrate) navigator.vibrate(50);
+    }
+
+    function onScanFailure(error) {
+        // Expected errors - no action needed
+    }
 
     // Clean up on page unload
     window.addEventListener('beforeunload', () => {

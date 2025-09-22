@@ -17,16 +17,38 @@
             </div>
         </div>
         <div id="contentContainer" class="content bigtopmargin">
-            <!-- The scanner area -->  
-            <div id="reader" style="width: 100%; max-width: 600px;"></div>
-            <div id="scan-result">No scan results yet</div>
+            <div id="scannerArea">
+                <!-- The scanner area -->
+                <div id="reader" style="width: 100%; height: 400px; background: #000;"></div>
 
-            <button id="startBtn">Start Scanner</button>
-            <button id="stopBtn" disabled>Stop Scanner</button>
-            <button id="pauseBtn" disabled>Pause Scanner</button>
-            <button id="resumeBtn" disabled>Resume Scanner</button>
-            <!-- End of scanner area -->
+                <div id="scannerStatus" style="margin: 10px 0; padding: 8px; border-radius: 4px;">
+                    Status: Stopped
+                </div>
 
+                <div id="result" style="margin: 10px 0; padding: 15px; border: 2px solid #4caf50; border-radius: 8px;">
+                    No scan results yet
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button id="startBtn" style="padding: 12px 20px;">
+                        Start Scanner
+                    </button>
+                    <button id="pauseBtn" disabled style="padding: 12px 20px;">
+                        ⏸️ Pause
+                    </button>
+                    <button id="resumeBtn" disabled style="padding: 12px 20px;">
+                        ▶️ Resume
+                    </button>
+                    <button id="stopBtn" disabled style="padding: 12px 20px;">
+                        ⏹️ Stop
+                    </button>
+                </div>
+
+                <div style="margin-top: 15px; font-size: 14px; color: #666;">
+                    <strong>Pro Tip:</strong> Pausing keeps the camera session active for instant resumption
+                </div>
+                <!-- End of scanner area -->
+            </div>
             <div id="songArea">
                 <h1>Songs</h1>
                 <div id="songs" class="index">
