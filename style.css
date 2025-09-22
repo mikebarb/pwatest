@@ -177,7 +177,7 @@ It needs to viewable when we have scrollable content
 }
 
 .content {
-    margin-top: 120px; /* Initial marSgin for visible header */
+    margin-top: 20px; /* Initial marSgin for visible header */
     padding: 2rem;
     transition: margin-top 0.3s ease; /* Smooth content adjustment */
 }
