@@ -237,7 +237,7 @@ function showSearch() {
     //const contentContainer = document.getElementById('contentContainer');
     //document.getElementById('headerContainer').style.display = 'block';
     document.getElementById('headerContainer').classList.remove("hideme");
-    document.getElementById('contentContainer').style.marginTop = '20px'; // Adjust to header height
+    document.getElementById('contentContainer').style.marginTop = '200px'; // Adjust to header height
 }
 
 //const element = document.getElementById('myElement');

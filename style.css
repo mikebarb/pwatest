@@ -182,6 +182,10 @@ It needs to viewable when we have scrollable content
     transition: margin-top 0.3s ease; /* Smooth content adjustment */
 }
 
+.bigtopmargin {
+    margin-top: 200px; /* Increased margin when header is fixed */
+}   
+
 /* Styles for the barcode reader */
 #reader {
     width: 100%;
