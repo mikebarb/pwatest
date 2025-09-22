@@ -58,6 +58,14 @@ function initializeApp() {
     // the two buttons at the top of the Lyrics page
     document.getElementById('indexButton').addEventListener('click', indexButtonClick);
     document.getElementById('searchButton').addEventListener('click', searchButtonClick);
+    //<button id="startBtn" onclick="startPersistentScanner()">Start Scanner</button>
+    //<button id="stopBtn" onclick="stopScanner()" disabled>Stop Scanner</button>
+    //<button id="pauseBtn" onclick="pauseScanner()" disabled>Pause Scanner</button>
+    //<button id="resumeBtn" onclick="resumeScanner()" disabled>Resume Scanner</button>
+    document.getElementById('startBtn').addEventListener('click', startPersistentScanner);
+    document.getElementById('stopBtn').addEventListener('click', stopScanner);
+    document.getElementById('pauseBtn').addEventListener('click', pauseScanner);
+    document.getElementById('resumeBtn').addEventListener('click', resumeScanner);
     // Notes:
     // event.target = element actually clicked
     // event.currentTarget = element where the event listener is
@@ -111,11 +119,7 @@ function initializeApp() {
             {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
-                rememberLastUsedCamera: true,
-                supportedScanTypes: [
-                    Html5QrcodeScanType.SCAN_TYPE_QR_CODE,
-                    Html5QrcodeScanType.SCAN_TYPE_BARCODE
-                ]
+                rememberLastUsedCamera: true
             },
             false
         );
@@ -127,7 +131,6 @@ function initializeApp() {
     async function startPersistentScanner() {
         try {
             const scanner = await initScanner();
-            
             if (isScannerActive) {
                 console.log('Scanner already running');
                 return;
