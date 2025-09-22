@@ -14,8 +14,10 @@ const toggleButton = document.getElementById('scan-toggle');
 const scannerContainer = document.getElementById('scanner-container');
 
 // Variables to hold the scanner instance and its state
-let html5QrcodeScanner;
-let isScanning = false;
+let html5QrcodeScanner = null;
+let isScannerActive = false;
+let cameraId = null;
+
 
 //window.appGlobalMap = new Map(); // For browser
 let songMapByNumber = new Map();
@@ -97,89 +99,149 @@ function initializeApp() {
         }
     });
 
-    // Toggle scanner on button click
-    toggleButton.addEventListener('click', () => {
-        if (isScanning) {
-            stopScanner();
-        } else {
-            startScanner();
-        }
-    });
-
-    // Good practice: Stop the scanner if the page is hidden (user switches tabs)
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden && isScanning) {
-            stopScanner();
-        }
-    });
-
     // Scanner related code
-    // Function to initialize and start the scanner
-    async function startScanner() {
+
+    // Initialize the scanner (runs only once)
+    async function initScanner() {
+        if (html5QrcodeScanner) return html5QrcodeScanner;
+        
+        // Create scanner instance
+        html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [
+                    Html5QrcodeScanType.SCAN_TYPE_QR_CODE,
+                    Html5QrcodeScanType.SCAN_TYPE_BARCODE
+                ]
+            },
+            false
+        );
+        
+        return html5QrcodeScanner;
+    }
+
+    // Start scanner with persistent session
+    async function startPersistentScanner() {
         try {
-            // Check if the class is available
-            if (typeof Html5QrcodeScanner === 'undefined') {
-                throw new Error("The scanning library failed to load correctly. Please refresh the page.");
+            const scanner = await initScanner();
+            
+            if (isScannerActive) {
+                console.log('Scanner already running');
+                return;
             }
 
-            // USE Html5QrcodeScanner INSTEAD of Html5Qrcode
-            html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader", // Container ID
-                { 
-                    fps: 10,
-                    qrbox: { width: 250, height: 150 },
-                    supportedScanTypes: [ 
-                        Html5QrcodeScanType.SCAN_TYPE_CAMERA 
-                    ]
-                },
-                /* verbose= */ false
-            );
+            // Get list of cameras to remember which one we're using
+            const cameras = await Html5Qrcode.getCameras();
+            if (cameras && cameras.length > 0) {
+                cameraId = cameras[0].id; // Use first camera or remember user choice
+            }
 
-             // Render the scanner UI into the container
-            html5QrcodeScanner.render(
-                (decodedText, decodedResult) => {
-                    // Success callback
-                    console.log(`Scan successful: ${decodedText}`);
-                    resultInput.value = decodedText;
-                    stopScanner();
-                },
-                (errorMessage) => {
-                    // Failure callback - can be mostly ignored
-                }
-            );
-
-            isScanning = true;
-            toggleButton.textContent = 'Stop Scanner';
-            scannerContainer.style.display = 'block';
-
+            // Start scanning - this will only show permission banner on first run
+            await scanner.render(onScanSuccess, onScanFailure);
+            
+            isScannerActive = true;
+            updateButtonStates();
+            
         } catch (error) {
-            console.error("Failed to start scanner:", error);
-            alert(`Error: ${error.message}`);
-            isScanning = false;
-            toggleButton.textContent = 'Start Scanner';
-            scannerContainer.style.display = 'none';
+            console.error('Failed to start scanner:', error);
+            alert('Camera access denied or unavailable');
         }
     }
 
-    // Function to stop the scanner and clean up
+    // Pause scanning (keep camera session alive)
+    async function pauseScanner() {
+        if (!html5QrcodeScanner || !isScannerActive) return;
+        
+        try {
+            // html5-qrcode@2.3.8 doesn't have direct pause method
+            // We'll stop the scanner but remember the camera
+            await html5QrcodeScanner.clear();
+            isScannerActive = false;
+            updateButtonStates();
+            
+        } catch (error) {
+            console.error('Error pausing scanner:', error);
+        }
+    }
+
+    // Resume scanning (no permission prompt)
+    async function resumeScanner() {
+        if (isScannerActive) return;
+        
+        try {
+            // Re-render with the same camera - no new permission request
+            await html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            isScannerActive = true;
+            updateButtonStates();
+            
+        } catch (error) {
+            console.error('Error resuming scanner:', error);
+        }
+    }
+
+    // Completely stop and clean up
     async function stopScanner() {
-        if (html5QrcodeScanner && isScanning) {
-            try {
-                await html5QrcodeScanner.stop();
-                console.log("Scanner stopped.");
-            } catch (error) {
-                console.error("Failed to stop scanner:", error);
-            } finally {
-                // Reset the UI state regardless of errors
-                isScanning = false;
-                toggleButton.textContent = 'Start Scanner';
-                scannerContainer.style.display = 'none';
-            }
+        if (!html5QrcodeScanner) return;
+        
+        try {
+            await html5QrcodeScanner.clear();
+            html5QrcodeScanner = null;
+            isScannerActive = false;
+            cameraId = null;
+            updateButtonStates();
+            
+        } catch (error) {
+            console.error('Error stopping scanner:', error);
         }
     }
 
+    // Scan success callback
+    function onScanSuccess(decodedText, decodedResult) {
+        console.log(`Scan successful: ${decodedText}`);
+        document.getElementById('scan-result').innerHTML = `
+            <strong>Scanned:</strong> ${decodedText}<br>
+            <strong>Format:</strong> ${decodedResult.result.format?.formatName || 'Unknown'}<br>
+            <small>${new Date().toLocaleTimeString()}</small>
+        `;
+        
+        // Optional: Add haptic feedback or sound
+        if (navigator.vibrate) navigator.vibrate(100);
+    }
 
+    // Scan failure callback (mostly noise, can be ignored)
+    function onScanFailure(error) {
+        // Expected errors - no barcode found, etc.
+        // console.log('Scan failed (expected):', error);
+    }
 
+    // Update UI states
+    function updateButtonStates() {
+        document.getElementById('startBtn').disabled = isScannerActive;
+        document.getElementById('stopBtn').disabled = !html5QrcodeScanner;
+        document.getElementById('pauseBtn').disabled = !isScannerActive;
+        document.getElementById('resumeBtn').disabled = isScannerActive || !html5QrcodeScanner;
+    }
+
+    // Handle page visibility changes (optional)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && isScannerActive) {
+            // Page hidden - pause scanner to save resources
+            pauseScanner();
+        } else if (!document.hidden && html5QrcodeScanner && !isScannerActive) {
+            // Page visible again - resume if we had an active session
+            resumeScanner();
+        }
+    });
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        if (html5QrcodeScanner) {
+            stopScanner();
+        }
+    });
 
     // Initial setup
     loadInitialData();
