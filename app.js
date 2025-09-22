@@ -5,7 +5,17 @@ let currentSong = 1;
 let activeArea = "songArea";  // which area is currently displayed - index, search, etc.
 let fromArea = "";  // where the current display came from - index, search, etc.
 
-// Initialize with your data
+// Routines for detecting swipes.
+let startX, startY, endX, endY;
+
+// Get DOM elements for scanner code
+const resultInput = document.getElementById('barcode-result');
+const toggleButton = document.getElementById('scan-toggle');
+const scannerContainer = document.getElementById('scanner-container');
+
+// Variables to hold the scanner instance and its state
+let html5QrcodeScanner;
+let isScanning = false;
 
 //window.appGlobalMap = new Map(); // For browser
 let songMapByNumber = new Map();
@@ -64,6 +74,112 @@ function initializeApp() {
             handleIndexClick(clickedElement, event);
         }
     });
+
+    // Swipe detection
+    document.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    });
+    document.addEventListener('touchend', (e) => {
+        endX = e.changedTouches[0].clientX;
+        endY = e.changedTouches[0].clientY;
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        // Detect swipe direction
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            if(Math.abs(deltaX) > 10) {
+                if (deltaX > 0) {
+                    swipeRight();
+                } else {
+                    swipeLeft();
+                }
+            }
+        }
+    });
+
+    // Toggle scanner on button click
+    toggleButton.addEventListener('click', () => {
+        if (isScanning) {
+            stopScanner();
+        } else {
+            startScanner();
+        }
+    });
+
+    // Good practice: Stop the scanner if the page is hidden (user switches tabs)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && isScanning) {
+            stopScanner();
+        }
+    });
+
+    // Scanner related code
+    // Function to initialize and start the scanner
+    async function startScanner() {
+        try {
+            // Check if the class is available
+            if (typeof Html5QrcodeScanner === 'undefined') {
+                throw new Error("The scanning library failed to load correctly. Please refresh the page.");
+            }
+
+            // USE Html5QrcodeScanner INSTEAD of Html5Qrcode
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader", // Container ID
+                { 
+                    fps: 10,
+                    qrbox: { width: 250, height: 150 },
+                    supportedScanTypes: [ 
+                        Html5QrcodeScanType.SCAN_TYPE_CAMERA 
+                    ]
+                },
+                /* verbose= */ false
+            );
+
+             // Render the scanner UI into the container
+            html5QrcodeScanner.render(
+                (decodedText, decodedResult) => {
+                    // Success callback
+                    console.log(`Scan successful: ${decodedText}`);
+                    resultInput.value = decodedText;
+                    stopScanner();
+                },
+                (errorMessage) => {
+                    // Failure callback - can be mostly ignored
+                }
+            );
+
+            isScanning = true;
+            toggleButton.textContent = 'Stop Scanner';
+            scannerContainer.style.display = 'block';
+
+        } catch (error) {
+            console.error("Failed to start scanner:", error);
+            alert(`Error: ${error.message}`);
+            isScanning = false;
+            toggleButton.textContent = 'Start Scanner';
+            scannerContainer.style.display = 'none';
+        }
+    }
+
+    // Function to stop the scanner and clean up
+    async function stopScanner() {
+        if (html5QrcodeScanner && isScanning) {
+            try {
+                await html5QrcodeScanner.stop();
+                console.log("Scanner stopped.");
+            } catch (error) {
+                console.error("Failed to stop scanner:", error);
+            } finally {
+                // Reset the UI state regardless of errors
+                isScanning = false;
+                toggleButton.textContent = 'Start Scanner';
+                scannerContainer.style.display = 'none';
+            }
+        }
+    }
+
+
+
 
     // Initial setup
     loadInitialData();
@@ -322,31 +438,6 @@ function loadInitialData() {
 }
 
 // Routines for detecting swipes.
-let startX, startY, endX, endY;
-
-document.addEventListener('touchstart', (e) => {
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-});
-
-document.addEventListener('touchend', (e) => {
-    endX = e.changedTouches[0].clientX;
-    endY = e.changedTouches[0].clientY;
-    
-    const deltaX = endX - startX;
-    const deltaY = endY - startY;
-    
-    // Detect swipe direction
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        if(Math.abs(deltaX) > 10) {
-            if (deltaX > 0) {
-                swipeRight();
-            } else {
-                swipeLeft();
-            }
-        }
-    }
-});
 
 // Toast notification
 function showToast(message, duration = 3000) {
@@ -559,6 +650,7 @@ class FuzzySearchHighlighter {
         };
     }
 }
+
 
 
 // Initialize app when DOM is fully loaded

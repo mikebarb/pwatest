@@ -6,6 +6,7 @@
         <title>My Simple PWA</title>
         <link rel="manifest" href="manifest.json">
         <link rel="stylesheet" href="style.css">
+        <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     </head>
 
     <body>
@@ -14,6 +15,17 @@
                 <input type="text" id="myInput" placeholder="Type something...">
                 <button id="findButton">Find</button>
             </div>
+            <!-- The scanner area -->  
+            <label for="barcode-result">Scanned Barcode:</label>
+            <input type="text" id="barcode-result" readonly placeholder="Scan a barcode...">
+
+            <button id="scan-toggle">Start Scanner</button>
+
+            <div id="scanner-container" style="display: none;">
+                <!-- The scanner will be inserted here by the library -->
+                <div id="reader"></div>
+            </div>
+            <!-- End of scanner area -->
         </div>
         <div id="contentContainer" class="content">
             <div id="songArea">

@@ -182,4 +182,29 @@ It needs to viewable when we have scrollable content
     transition: margin-top 0.3s ease; /* Smooth content adjustment */
 }
 
-
+/* Styles for the barcode reader */
+#reader {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+}
+#scanner-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1; /* Makes the container square */
+    overflow: hidden;
+    border: 2px solid #ccc;
+    margin: 1rem 0;
+}
+#scan-toggle {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.2rem;
+    margin: 1rem 0;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
