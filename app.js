@@ -14,7 +14,7 @@ let startX, startY, endX, endY;
 let html5QrcodeScanner = null;
 let isScannerActive = false;
 let isPaused = false;
-let currentCameraStream = null;
+let capturedStream = null;
 let isResuming = false;
 
 //window.appGlobalMap = new Map(); // For browser
@@ -105,7 +105,7 @@ function initializeApp() {
 
     // Scanner related code
 
-    // Initialize scanner
+    // Initialise the scanner
     function initScanner() {
         if (html5QrcodeScanner) return html5QrcodeScanner;
         
@@ -129,21 +129,34 @@ function initializeApp() {
         return html5QrcodeScanner;
     }
 
-    // Start scanner
+    // Start scanner with stream capture - FIXED
     async function startScanner() {
         try {
             if (isScannerActive && !isPaused) return;
             
             const scanner = initScanner();
             
-            if (isPaused) {
-                // Resume from paused state
+            if (isPaused && capturedStream) {
                 await resumeScanner();
                 return;
             }
 
-            // First time start
-            await scanner.render(onScanSuccess, onScanFailure);
+            // Render the scanner
+            scanner.render(onScanSuccess, onScanFailure);
+            
+            // Wait for scanner to initialize and capture stream
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Capture the stream after render
+            const videoElement = document.querySelector('#reader video');
+            if (videoElement && videoElement.srcObject) {
+                capturedStream = videoElement.srcObject;
+                const tracks = capturedStream.getVideoTracks();
+                if (tracks.length > 0) {
+                    currentCameraId = tracks[0].getSettings().deviceId;
+                    console.log('Camera stream captured:', currentCameraId);
+                }
+            }
             
             isScannerActive = true;
             isPaused = false;
@@ -155,108 +168,68 @@ function initializeApp() {
         }
     }
 
-    // Pause scanner (keep camera alive)
-    async function pauseScanner() {
-        if (!isScannerActive || isPaused || isResuming) return;
+    // Resume scanner - FIXED for v2.3.8 compatibility
+    async function resumeScanner() {
+        if (!isPaused || isResuming) return;
+        
+        isResuming = true;
+        updateButtonStates();
         
         try {
-            // Get the video element
+            // For v2.3.8, we need to recreate the scanner completely
+            // but reuse the camera ID to avoid permission prompt
+            
+            // First, completely clean up
+            if (html5QrcodeScanner) {
+                try {
+                    html5QrcodeScanner.clear();
+                } catch (e) {
+                    console.log('Cleanup during resume:', e.message);
+                }
+                html5QrcodeScanner = null;
+            }
+
+            // Create new scanner instance with remembered camera
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader", 
+                { 
+                    fps: 10,
+                    qrbox: 250,
+                    rememberLastUsedCamera: true,
+                    supportedFormats: [ 
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.UPC_A
+                    ]
+                },
+                false
+            );
+
+            // Use the library's built-in resume functionality
+            // v2.3.8 will reuse the last camera without prompt if rememberLastUsedCamera is true
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            
+            // Wait for initialization
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // Capture the new stream for potential future pauses
             const videoElement = document.querySelector('#reader video');
             if (videoElement && videoElement.srcObject) {
-                // Store the stream for later resumption
-                currentCameraStream = videoElement.srcObject;
-                
-                // Stop the video playback but keep stream available
-                // Properly disable tracks instead of just pausing
-                const tracks = currentCameraStream.getTracks();
-                tracks.forEach(track => {
-                    track.enabled = false
-                });
-                // Remove from video element gracefully
-                videoElement.srcObject = null;
-                videoElement.load();    // proper cleanup
-            }
-            
-            // Stop the scanning logic safely but don't clear the scanner
-            if (html5QrcodeScanner && html5QrcodeScanner._html5Qrcode) {
-                try{
-                html5QrcodeScanner._html5Qrcode.stop();
-                } catch (e){
-                    console.log('Graceful stop during pause', e.message);
+                capturedStream = videoElement.srcObject;
+                const tracks = capturedStream.getVideoTracks();
+                if (tracks.length > 0) {
+                    currentCameraId = tracks[0].getSettings().deviceId;
                 }
             }
             
-            isPaused = true;
-            updateButtonStates();
-            
-            console.log('Scanner paused safely (camera session maintained)');
-            
-        } catch (error) {
-            console.error('Error pausing scanner:', error);
-            // If pause fails, do a full stop
-            await stopScanner();
-        }
-    }
-
-    // Resume scanner (no permission prompt)
-    // Safe resume function with retry logic
-    async function resumeScanner() {
-        if (!isPaused || isResuming) return;
-        isResuming = true;
-        updateButtonStates();
-        try {
-            if (!currentCameraStream) {
-                throw new Error('No camera stream to resume');
-            }
-            const videoElement = document.querySelector('#reader video');
-            if (!videoElement) {
-                throw new Error('Video element not found');
-            }
-            // Check if stream tracks are still valid
-            const tracks = currentCameraStream.getTracks();
-            const allTracksValid = tracks.every(track => track.readyState === 'live');
-            if (!allTracksValid) {
-                console.log("Stream tracks invalid, restarting scanner");
-            }
-            if (videoElement && currentCameraStream) {
-                await stopScanner();
-                await startScanner();
-                isResuming = false;
-                return;
-            }
-
-            // Re-enable tracks
-            tracks.forEach(track => {
-                track.enabled = true;
-            });
-
-            // Restore stream to video element
-            videoElement.srcObject = currentCameraStream;
-
-            // wait for video to be ready
-            await new Promise((resolve) => {
-                videoElement.onloadedmetadata = resolve;
-                setTimeout(resolve, 1000); // Fallback timeout
-            });
-            
-            await videoElement.play();
-
-            // Restart scanning logic
-            if (html5QrcodeScanner && html5QrcodeScanner._html5Qrcode) {
-                await html5QrcodeScanner._html5Qrcode.start(
-                    currentCameraStream,
-                    { fps: 10, qrbox: 250 },
-                    onScanSuccess,
-                    onScanFailure
-                );
-            }
-            
             isPaused = false;
-            console.log('Scanner resumed (no permission prompt)');
+            console.log('Scanner resumed using library rememberLastUsedCamera');
             
         } catch (error) {
             console.error('Error resuming scanner:', error);
-            // Fallback: full restart if resume fails
+            // Fallback to regular start if resume fails
             await stopScanner();
             await startScanner();
         } finally {
@@ -265,81 +238,85 @@ function initializeApp() {
         }
     }
 
-    // Stop scanner completely
-    async function stopScanner() {
-        //if (!html5QrcodeScanner) return;
+    // Also update pauseScanner to be less aggressive
+    async function pauseScanner() {
+        if (!isScannerActive || isPaused || isResuming) return;
+        
         try {
-            // clean up video element first
+            // Just stop the scanning without interfering with the stream
+            if (html5QrcodeScanner && html5QrcodeScanner._html5Qrcode) {
+                await html5QrcodeScanner._html5Qrcode.stop();
+            }
+            
+            // Optional: gently disable tracks without breaking library state
             const videoElement = document.querySelector('#reader video');
-            if(videoElement){
-                videoElement.srcObject = null;
-                videoElement.load();
+            if (videoElement && videoElement.srcObject) {
+                const tracks = videoElement.srcObject.getTracks();
+                tracks.forEach(track => {
+                    track.enabled = false;
+                });
             }
+            
+            isPaused = true;
+            updateButtonStates();
+            console.log('Scanner paused gently');
+            
+        } catch (error) {
+            console.error('Error pausing scanner:', error);
+            await stopScanner();
+        }
+    }
 
-            // stop and clear scanner
-            if(html5QrcodeScanner){
-                await html5QrcodeScanner.clear();
-                html5QrcodeScanner = null;
-            }
-            // properly stop camera stream if it exists
-            if(currentCameraStream){
-                const tracks = currentCameraStream.getTracks();
+    // Stop scanner
+    async function stopScanner() {
+        try {
+            // Stop all tracks properly
+            if (capturedStream) {
+                const tracks = capturedStream.getTracks();
                 tracks.forEach(track => {
                     track.stop();
                 });
-                currentCameraStream = null;
+                capturedStream = null;
             }
+
+            // Clear scanner
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+                html5QrcodeScanner = null;
+            }
+
+            // Clean up video element
+            const videoElement = document.querySelector('#reader video');
+            if (videoElement) {
+                videoElement.srcObject = null;
+                videoElement.remove();
+            }
+            
         } catch (error) {
             console.error('Error stopping scanner:', error);
         } finally {
             isScannerActive = false;
             isPaused = false;
+            capturedStream = null;
+            currentCameraId = null;
             updateButtonStates();
         }
     }
 
-    // Error handling for camera issues
-    function handleCameraError(error) {
-        console.error('Camera error:', error);
-        console.error('Camera error: ', error);
-        
-        let userMessage = 'Camera error occurred';
-        if(error.message.includes('Permission')){
-            userMessage = 'Camer access denied. Please check browser permissions.';
-        }else if(error.message.includes('NotFound')){
-            userMessage = 'No camera found on this device';
-        }else if(error.message.includes('NotReadable')){
-            userMessage = 'Camera is in use by another application';
-        }else if(error.message.includes('Abort')){
-            userMessage = 'Camera connection was interrupted';
-        }
-        // Show user friendly error
-        const errorElement = document.getElementById('errorMessage');
-        if(errorElement){
-            errorElement.textContent = userMessage;
-            errorElement.style.display = 'block';
-            // auto-hide after 5 seconds
-            setTimeout(() => {
-                errorElement.style.display = 'none';
-            }, 5000);
-        }
-        // Reset state on error
-        isScannerActive = false;
-        isPaused = false;
-        updateButtonStates();
-    }
-
-
-
-    // Update UI states
+    // Update UI states - ADD THIS FUNCTION
     function updateButtonStates() {
-        document.getElementById('startBtn').disabled = isScannerActive && !isPaused;
-        document.getElementById('pauseBtn').disabled = !isScannerActive || isPaused || isResuming;
-        document.getElementById('resumeBtn').disabled = !isPaused || isResuming;
-        document.getElementById('stopBtn').disabled = !isScannerActive && !isPaused;
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusElement = document.getElementById('scannerStatus');
+        
+        if (startBtn) startBtn.disabled = isScannerActive && !isPaused;
+        if (pauseBtn) pauseBtn.disabled = !isScannerActive || isPaused || isResuming;
+        if (resumeBtn) resumeBtn.disabled = !isPaused || isResuming;
+        if (stopBtn) stopBtn.disabled = !isScannerActive && !isPaused;
         
         // Update status display
-        const statusElement = document.getElementById('scannerStatus');
         if (statusElement) {
             if (isResuming) {
                 statusElement.textContent = 'Status: Resuming...';
@@ -357,26 +334,53 @@ function initializeApp() {
         }
     }
 
-    // Handle page visibility changes
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden && isScannerActive && !isPaused) {
-            // Auto-pause when app goes to background
-            pauseScanner();
-        } else if (!document.hidden && isPaused) {
-            // Auto-resume when app comes to foreground
-            resumeScanner();
+    // Error handling
+    function handleCameraError(error) {
+        console.error('Camera error:', error);
+        
+        let userMessage = 'Camera error occurred';
+        if (error.message.includes('Permission')) {
+            userMessage = 'Camera access denied. Please check browser permissions.';
+        } else if (error.message.includes('NotFound')) {
+            userMessage = 'No camera found on this device';
+        } else if (error.message.includes('NotReadable')) {
+            userMessage = 'Camera is in use by another application';
+        } else if (error.message.includes('Abort')) {
+            userMessage = 'Camera connection was interrupted';
         }
-    });
+        
+        const errorElement = document.getElementById('errorMessage');
+        if (errorElement) {
+            errorElement.textContent = userMessage;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+        
+        isScannerActive = false;
+        isPaused = false;
+        updateButtonStates();
+    }
 
     // Scan callbacks
     function onScanSuccess(decodedText, decodedResult) {
-        document.getElementById('result').textContent = decodedText;
+        const resultElement = document.getElementById('result');
+        if (resultElement) {
+            resultElement.textContent = decodedText;
+        }
         if (navigator.vibrate) navigator.vibrate(50);
     }
 
     function onScanFailure(error) {
         // Expected errors - no action needed
     }
+
+    // Initialize button states on load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateButtonStates();
+    });
+
 
     // Clean up on page unload
     window.addEventListener('beforeunload', () => {

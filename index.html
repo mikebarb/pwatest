@@ -19,34 +19,41 @@
         <div id="contentContainer" class="content bigtopmargin">
             <div id="scannerArea">
                 <!-- The scanner area -->
-                <div id="reader" style="width: 100%; height: 400px; background: #000;"></div>
-
-                <div id="scannerStatus" style="margin: 10px 0; padding: 8px; border-radius: 4px;">
-                    Status: Stopped
+                <!-- Error Message Display -->
+                <div id="errorMessage" class="error-message"></div>
+                
+                <!-- Scanner Status -->
+                <div class="status">
+                    <span id="scannerStatus">Status: Stopped</span>
+                </div>
+                
+                <!-- Scanner Container -->
+                <div class="scanner-container">
+                    <div id="reader">
+                        <div class="scanner-overlay">
+                            <div class="scanner-line"></div>
+                        </div>
+                    </div>
                 </div>
 
-                <div id="result" style="margin: 10px 0; padding: 15px; border: 2px solid #4caf50; border-radius: 8px;">
-                    No scan results yet
+                <!-- Control Buttons -->
+                <div class="controls">
+                    <button id="startBtn">Start Scanner</button>
+                    <button id="pauseBtn" disabled>Pause</button>
+                    <button id="resumeBtn" disabled>Resume</button>
+                    <button id="stopBtn" disabled>Stop</button>
                 </div>
 
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button id="startBtn" style="padding: 12px 20px;">
-                        Start Scanner
-                    </button>
-                    <button id="pauseBtn" disabled style="padding: 12px 20px;">
-                        ⏸️ Pause
-                    </button>
-                    <button id="resumeBtn" disabled style="padding: 12px 20px;">
-                        ▶️ Resume
-                    </button>
-                    <button id="stopBtn" disabled style="padding: 12px 20px;">
-                        ⏹️ Stop
-                    </button>
+                <!-- Results Display -->
+                <div class="result-container">
+                    <div class="result-label">Scan Result:</div>
+                    <div id="result">No scan yet...</div>
                 </div>
-
-                <div style="margin-top: 15px; font-size: 14px; color: #666;">
-                    <strong>Pro Tip:</strong> Pausing keeps the camera session active for instant resumption
+                
+                <div class="scanner-info">
+                    Supports: QR Code, CODE_128, CODE_39, EAN_13, UPC_A
                 </div>
+                
                 <!-- End of scanner area -->
             </div>
             <div id="songArea">
