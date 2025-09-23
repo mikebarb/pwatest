@@ -129,7 +129,7 @@ function initializeApp() {
         return html5QrcodeScanner;
     }
 
-    // Start scanner with stream capture - FIXED
+    // Simplest working version
     async function startScanner() {
         try {
             if (isScannerActive && !isPaused) return;
@@ -141,22 +141,11 @@ function initializeApp() {
                 return;
             }
 
-            // Render the scanner
+            // Just use regular render - let iOS handle camera selection
             scanner.render(onScanSuccess, onScanFailure);
             
-            // Wait for scanner to initialize and capture stream
+            // Wait for initialization
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Capture the stream after render
-            const videoElement = document.querySelector('#reader video');
-            if (videoElement && videoElement.srcObject) {
-                capturedStream = videoElement.srcObject;
-                const tracks = capturedStream.getVideoTracks();
-                if (tracks.length > 0) {
-                    currentCameraId = tracks[0].getSettings().deviceId;
-                    console.log('Camera stream captured:', currentCameraId);
-                }
-            }
             
             isScannerActive = true;
             isPaused = false;
