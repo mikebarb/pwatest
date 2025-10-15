@@ -21,12 +21,17 @@ let camerasList = [];
 
 //window.appGlobalMap = new Map(); // For browser
 let songMapByNumber = new Map();
+// Add version parameter to force update
+//const SW_VERSION = '2.0'; // Change this when you update
+//navigator.serviceWorker.register('/sw.js?v=' + SW_VERSION);
 
+const SW_VERSION = ' 2.8'; // Change this when you update
 // Service Worker Registration
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
+            //navigator.serviceWorker.register('./sw.js')
+            navigator.serviceWorker.register('/sw.js?v=' + SW_VERSION)
                 .then(registration => {
                     // Optional: Check for updates
                     registration.update();
@@ -49,10 +54,15 @@ function initializeApp() {
     // the trigger for the search on the songs/index page
     document.getElementById('findButton').addEventListener('click', findButtonClick);
    // Handle Enter key in search text field - alternative to pressig the find button
-    document.getElementById('myInput').addEventListener('keydown', function(event) {
+    document.getElementById('myInput').addEventListener('keyup', function(event) {
         if (event.key === 'Enter') {
             event.preventDefault(); // Prevent form submission if inside a form
             findButtonClick();
+            this.blur();
+        } else {
+            event.preventDefault(); // Prevent form submission if inside a form
+            findButtonClick();
+            //this.blur();  
         }
     });
     // the two buttons at the top of the Lyrics page
@@ -107,7 +117,6 @@ function initializeApp() {
 
 function displayScreen(){
     if (activeArea === "songArea"){      // index area - list of songs
-        //document.getElementById('inputContainer').classList.remove("hideme");
         showSearch();
         document.getElementById('songArea').classList.remove("hideme");
         document.getElementById('resultsArea').classList.add("hideme") ;
@@ -117,18 +126,16 @@ function displayScreen(){
             viewElement(thisElement);
         }
     }else if (activeArea === "resultsArea"){   // search results
-        //document.getElementById('inputContainer').classList.remove("hideme");
         showSearch();
         document.getElementById('songArea').classList.add("hideme");
         document.getElementById('resultsArea').classList.remove("hideme");
         document.getElementById('lyricsArea').classList.add("hideme");
     }else if (activeArea === "lyricsArea"){
-        //document.getElementById('inputContainer').classList.add("hideme");
         hideSearch();
         document.getElementById('songArea').classList.add("hideme");
         document.getElementById('resultsArea').classList.add("hideme");
         document.getElementById('lyricsArea').classList.remove("hideme");
-        const element = document.getElementById('myElement');
+        window.scrollTo(0, 0);    // scroll to top of page
         if (document.getElementById('results').children.length > 0) {   // Search results has content
             document.getElementById('searchButton').classList.remove("hidemekeepspace");
         }else{
@@ -137,40 +144,27 @@ function displayScreen(){
     }
 }
 
-// hide and show the search fields and allow page content to use all the page.
-//function toggleHeader() {
-//    const body = document.body;
-//    body.classList.toggle('header-hidden');
-//}
-
 // Alternative: Hide header container completely
 function hideSearch() {
-    //const headerContainer = document.getElementById('headerContainer');
-    //const contentContainer = document.getElementById('contentContainer');
-    //document.getElementById('headerContainer').style.display = 'none';
     document.getElementById('headerContainer').classList.add("hideme");
-    document.getElementById('contentContainer').style.marginTop = '0';
+    document.getElementById('contentContainer').classList.remove("bigtopmargin");
 }
 
 function showSearch() {
-    //const headerContainer = document.getElementById('headerContainer');
-    //const contentContainer = document.getElementById('contentContainer');
-    //document.getElementById('headerContainer').style.display = 'block';
     document.getElementById('headerContainer').classList.remove("hideme");
+    document.getElementById('contentContainer').classList.add("bigtopmargin");
 }
 
-//const element = document.getElementById('myElement');
-//element.scrollIntoView();
 // Bring this element to be viewable on the screen
-//viewElement(thisElement);
-
 // With options for smooth scrolling and positioning
 function viewElement(element){
-    element.scrollIntoView({
-        behavior: 'smooth', // 'auto' or 'smooth'
-        block: 'center',    // 'start', 'center', 'end', or 'nearest'
-        inline: 'nearest'   // 'start', 'center', 'end', or 'nearest'
-    });
+    //element.scrollIntoView({
+    //    //behavior: 'smooth', // 'auto' or 'smooth'
+    //    block: 'center',    // vertical: 'start', 'center', 'end', or 'nearest'
+    //    inline: 'start'     // hortzontal: 'start', 'center', 'end', or 'nearest'
+    //});
+    //window.scrollTo(0, element.offsetTop - (window.innerHeight / 2)); // middle of screen
+    window.scrollTo(0, element.offsetTop - (window.innerHeight / 4));
 }
 
 function setCurrentSong(num){
@@ -212,7 +206,15 @@ function searchButtonClick() {
 
 function findButtonClick() {
     const inputVal = document.getElementById('myInput').value;
-    if (isInteger(inputVal)){    // check if input is numberic
+    if (inputVal.length == 0){    // search text is blank.
+        console.log("the search text field is blank");
+        // clear the results area
+        const container = document.getElementById('results');
+        container.innerHTML = '';
+        // just display the index again.
+        activeArea = "songArea";
+        displayScreen();
+    }else if (isInteger(inputVal)){    // check if input is numberic
         // Clear previous text search results
         const container = document.getElementById('results');
         container.innerHTML = '';
@@ -223,7 +225,7 @@ function findButtonClick() {
         let thisSong = songs[songMapByNumber.get(inputVal)];
         if (!(thisSong === undefined)) {    // song is found
             addLyricElement(thisSong);
-            activeArea = "songArea"
+            activeArea = "songArea";
             displayScreen();
         }else{
             showToast("There is no song number " + inputVal + ".");
@@ -255,14 +257,23 @@ function displaySearchResults(results) {
         return;
     }
     results.forEach(result => {
-        const div = document.createElement('div');
-        div.className = 'search-result';
-        div.id = 'r' + result.item.number;  
-        div.innerHTML = `
-            <div>Song: ${result.item.number}</div>
-            <div>${result.highlighted}</div>
-            `;
-        container.appendChild(div);
+        const divResult = document.createElement('div');
+        divResult.id = 'r' + result.item.number;  
+        divResult.className = 'search-result';
+        divResultNumber = document.createElement('div');
+        divResultNumber.className = 'search-result-number';
+        divResultNumber.innerHTML = result.item.number;
+        divResult.appendChild(divResultNumber);
+        divResultText = document.createElement('div');
+        divResultText.className = 'search-result-text';
+        divResultText.innerHTML = result.highlighted;
+        divResult.appendChild(divResultText);
+
+        //div.innerHTML = `
+        //    <div>Song: ${result.item.number}</div>
+        //    <div>${result.highlighted}</div>
+        //    `;
+        container.appendChild(divResult);
     });
 }
 
@@ -283,37 +294,43 @@ function addIndexElement(thisSong) {
 
 function createIndexElement(thisSong) {
     const newElement = document.createElement('div');
-    const newElement1 = document.createElement('p');
+    newElement.id = "s" + thisSong.number;
+    newElement.className = 'item';
+    const newElement1 = document.createElement('div');
+    newElement1.className = 'itemNumber';
     newElement1.textContent = thisSong.number;
     newElement.appendChild(newElement1);
-    const newElement2 = document.createElement('p');
+    const newElement2 = document.createElement('div');
     newElement2.textContent = thisSong.firstLine;
+    newElement2.className = 'itemText';
     newElement.appendChild(newElement2);
-    newElement.className = 'item';
-    newElement.id = "s" + thisSong.number;
     return newElement;
 }
 
 function swipeRight(){
-    const indexThisSong = songs.findIndex(song => song.number === currentSong); 
-    if (indexThisSong > 0){
-        let nextSong = songs[indexThisSong - 1]; // get the previous song
-        addLyricElement(nextSong);
-        setCurrentSong(nextSong.number);
-    }else{
-        showToast("This is the first song.");
+    if (activeArea === "lyricsArea"){
+        const indexThisSong = songs.findIndex(song => song.number === currentSong); 
+        if (indexThisSong > 0){
+            let nextSong = songs[indexThisSong - 1]; // get the previous song
+            addLyricElement(nextSong);
+            setCurrentSong(nextSong.number);
+        }else{
+            showToast("This is the first song.");
+        }
     }
 }
 
 function swipeLeft(){
-    const indexThisSong = songs.findIndex(song => song.number === currentSong);
-    if (indexThisSong < songs.length - 1){
-        let previousSong = songs[indexThisSong + 1];
-        addLyricElement(previousSong);
-        setCurrentSong(previousSong.number);
-    }else{
-        showToast("This is the last song.");
-    }       
+    if (activeArea === "lyricsArea"){
+        const indexThisSong = songs.findIndex(song => song.number === currentSong);
+        if (indexThisSong < songs.length - 1){
+            let previousSong = songs[indexThisSong + 1];
+            addLyricElement(previousSong);
+            setCurrentSong(previousSong.number);
+        }else{
+            showToast("This is the last song.");
+        }
+    }   
 }
 
 function addLyricElement(thisSong) {
@@ -321,21 +338,29 @@ function addLyricElement(thisSong) {
     setCurrentSong(thisSong.number);
     const newElement = createLyricElement(thisSong);
     document.getElementById('lyrics').innerHTML = '';  // Clear previous lyrics
+    document.getElementById('lyricNumber').innerHTML = thisSong.number;  // Insert new song number
     document.getElementById('lyrics').appendChild(newElement);    
 }
 
 function createLyricElement(thisSong) {
     const newElement = document.createElement('div');
-    var thisElement = document.createElement('h1');
-    thisElement.textContent = thisSong.number; // add the verse line
-    newElement.appendChild(thisElement);
+    //var thisElement = document.createElement('h1');
+    //thisElement.textContent = thisSong.number; // add the verse line
+    //newElement.appendChild(thisElement);
     for (const thisVerse of thisSong.verses) {
         for (const thisLine of thisVerse) {
             var thisElement = document.createElement('p');
+            if (thisLine.startsWith("  ")) {
+                thisElement.classList.add('doubleindentme');
+            }else if (thisLine.startsWith(" ")) {
+                thisElement.classList.add('indentme');
+            }else{    // no spaces at start of line
+                thisElement.classList.add('indentme');
+            }
             thisElement.textContent = thisLine; // add the verse line
             newElement.appendChild(thisElement);
         }
-        newElement.lastElementChild.className = 'verseLastLine';  // put  margin below this.
+        newElement.lastElementChild.classList.add('verseLastLine');  // put  margin below this.
     }
     newElement.className = 'verses';
     return newElement;
@@ -343,7 +368,7 @@ function createLyricElement(thisSong) {
 
 function loadInitialData() {
     // Load initial content or make API calls
-    fetch('./test.json')
+    fetch('./book.json')
         .then(response => response.json())
         .then(data => {
             songs = data;

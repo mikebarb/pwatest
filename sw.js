@@ -1,9 +1,14 @@
-const CACHE_NAME = 'my-pwa-cache-v1';
+const CACHE_NAME = 'my-pwa-cache-v1.1';
+
+// Add version parameter to force update
+//const SW_VERSION = '2.0'; // Change this when you update
+//navigator.serviceWorker.register('/sw.js?v=' + SW_VERSION);
+
 // Start with just caching the essential files
 const urlsToCache = [
   './',              // root
   './index.html',    // main HTML file
-  './test.json',     // your JSON file - add this line
+  './book.json',     // your JSON file - add this line
   './app.js',        // if you have JS  
   './style.css'      // if you have CSS
 ];
