@@ -276,3 +276,48 @@ It needs to viewable when we have scrollable content
 .bigtopmargin {
     margin-top: 80px; /* Increased margin when header is fixed */
 }   
+
+/* Navigation Arrows */
+.nav-arrow {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 60px;
+    height: 100px;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    border: none;
+    opacity: 0.7;
+}
+
+.nav-arrow:hover {
+    background: rgba(0, 0, 0, 0.6);
+    opacity: 1;
+}
+
+.nav-arrow svg {
+    width: 40px;
+    height: 40px;
+    fill: white;
+}
+
+#arrowLeft {
+    left: 20px;
+    border-radius: 0 8px 8px 0;
+}
+
+#arrowRight {
+    right: 20px;
+    border-radius: 8px 0 0 8px;
+}
+
+/* Hide arrows when not needed (optional) */
+.nav-arrow.hidden {
+    display: none;
+}
+

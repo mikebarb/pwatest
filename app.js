@@ -10,14 +10,9 @@ let startX, startY, endX, endY;
 
 // Get DOM elements for scanner code
 
-// Variables to hold the scanner instance and its state
-let html5QrcodeScanner = null;
-let isScannerActive = false;
-let isPaused = false;
-let isResuming = false;
-let capturedStream = null;
-let currentCameraId = null;
-let camerasList = [];
+// Variables to hold the arrow elements
+//const leftArrow = document.querySelector('.left-arrow');
+//const rightArrow = document.querySelector('.right-arrow');
 
 //window.appGlobalMap = new Map(); // For browser
 let songMapByNumber = new Map();
@@ -69,6 +64,9 @@ function initializeApp() {
     document.getElementById('indexButton').addEventListener('click', indexButtonClick);
     document.getElementById('searchButton').addEventListener('click', searchButtonClick);
 
+    document.getElementById('arrowLeft').addEventListener('click', swipeRight);
+    document.getElementById('arrowRight').addEventListener('click', swipeLeft);
+    //rightArrow.addEventListener('click', goToNextPage);
 
     // Notes:
     // event.target = element actually clicked
@@ -118,6 +116,7 @@ function initializeApp() {
 function displayScreen(){
     if (activeArea === "songArea"){      // index area - list of songs
         showSearch();
+        hideArrows();
         document.getElementById('songArea').classList.remove("hideme");
         document.getElementById('resultsArea').classList.add("hideme") ;
         document.getElementById('lyricsArea').classList.add("hideme");
@@ -127,11 +126,13 @@ function displayScreen(){
         }
     }else if (activeArea === "resultsArea"){   // search results
         showSearch();
+        hideArrows();
         document.getElementById('songArea').classList.add("hideme");
         document.getElementById('resultsArea').classList.remove("hideme");
         document.getElementById('lyricsArea').classList.add("hideme");
     }else if (activeArea === "lyricsArea"){
         hideSearch();
+        showArrows();
         document.getElementById('songArea').classList.add("hideme");
         document.getElementById('resultsArea').classList.add("hideme");
         document.getElementById('lyricsArea').classList.remove("hideme");
@@ -144,12 +145,19 @@ function displayScreen(){
     }
 }
 
-// Alternative: Hide header container completely
+function showArrows() {
+    document.getElementById('arrowLeft').classList.remove("hidden");
+    document.getElementById('arrowRight').classList.remove("hidden");
+}
+function hideArrows() {
+    document.getElementById('arrowLeft').classList.add("hidden");
+    document.getElementById('arrowRight').classList.add("hidden");
+}
+
 function hideSearch() {
     document.getElementById('headerContainer').classList.add("hideme");
     document.getElementById('contentContainer').classList.remove("bigtopmargin");
 }
-
 function showSearch() {
     document.getElementById('headerContainer').classList.remove("hideme");
     document.getElementById('contentContainer').classList.add("bigtopmargin");

@@ -2,6 +2,10 @@
 node_modules/
 vendor/
 
+# vim edit swap files
+*.un~
+temp
+
 # Logs
 *.log
 
