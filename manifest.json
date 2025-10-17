@@ -1,6 +1,6 @@
 {
     "name": "River Convention Songs",
-    "short_name": "Songs",
+    "short_name": "RCSongs",
     "description": "River Convention Song Book.",
     "start_url": "/",
     "display": "standalone",
