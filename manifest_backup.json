@@ -8,14 +8,15 @@
     "theme_color": "#333333",
     "icons": [
         {
-            "src": "./android-chrome-192x192.png",
+            "src": "https://placeholder.pics/svg/192",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/svg+xml"
         },
         {
-            "src": "./android-chrome-512x512.png",
+            "src": "https://placeholder.pics/svg/512",
             "sizes": "512x512", 
-            "type": "image/png"
+            "type": "image/svg+xml"
         }
     ]
+
 }

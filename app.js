@@ -8,6 +8,9 @@ let fromArea = "";  // where the current display came from - index, search, etc.
 // Routines for detecting swipes.
 let startX, startY, endX, endY;
 
+// Variable to hold the timer
+let inactivityTimer; 
+
 // Get DOM elements for scanner code
 
 // Variables to hold the arrow elements
@@ -20,7 +23,7 @@ let songMapByNumber = new Map();
 //const SW_VERSION = '2.0'; // Change this when you update
 //navigator.serviceWorker.register('/sw.js?v=' + SW_VERSION);
 
-const SW_VERSION = ' 2.8'; // Change this when you update
+const SW_VERSION = ' 2.13'; // Change this when you update
 // Service Worker Registration
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
@@ -63,6 +66,10 @@ function initializeApp() {
     // the two buttons at the top of the Lyrics page
     document.getElementById('indexButton').addEventListener('click', indexButtonClick);
     document.getElementById('searchButton').addEventListener('click', searchButtonClick);
+
+    // and the same two buttons in the tab bar at the bottom of the Lyrics page
+    document.getElementById('listButton').addEventListener('click', indexButtonClick);
+    document.getElementById('resultsButton').addEventListener('click', searchButtonClick);
 
     document.getElementById('arrowLeft').addEventListener('click', swipeRight);
     document.getElementById('arrowRight').addEventListener('click', swipeLeft);
@@ -117,6 +124,15 @@ function displayScreen(){
     if (activeArea === "songArea"){      // index area - list of songs
         showSearch();
         hideArrows();
+        document.getElementById('listButton').classList.remove("active");
+        //document.getElementById('resultsButton').classList.remove("active");
+        if (document.getElementById('results').children.length > 0) {   // Search results has content
+            //document.getElementById('searchButton').classList.remove("hidemekeepspace");
+            document.getElementById('resultsButton').classList.add("active");
+        }else{
+            //document.getElementById('searchButton').classList.add("hidemekeepspace");
+            document.getElementById('resultsButton').classList.remove("active");
+        }
         document.getElementById('songArea').classList.remove("hideme");
         document.getElementById('resultsArea').classList.add("hideme") ;
         document.getElementById('lyricsArea').classList.add("hideme");
@@ -127,31 +143,49 @@ function displayScreen(){
     }else if (activeArea === "resultsArea"){   // search results
         showSearch();
         hideArrows();
+        document.getElementById('listButton').classList.add("active");
+        document.getElementById('resultsButton').classList.remove("active");
         document.getElementById('songArea').classList.add("hideme");
         document.getElementById('resultsArea').classList.remove("hideme");
         document.getElementById('lyricsArea').classList.add("hideme");
     }else if (activeArea === "lyricsArea"){
         hideSearch();
         showArrows();
+        document.getElementById('listButton').classList.add("active");
         document.getElementById('songArea').classList.add("hideme");
         document.getElementById('resultsArea').classList.add("hideme");
         document.getElementById('lyricsArea').classList.remove("hideme");
         window.scrollTo(0, 0);    // scroll to top of page
+        document.getElementById('indexButton').classList.add("hidemekeepspace");
+        document.getElementById('searchButton').classList.add("hidemekeepspace");
         if (document.getElementById('results').children.length > 0) {   // Search results has content
-            document.getElementById('searchButton').classList.remove("hidemekeepspace");
+            //document.getElementById('searchButton').classList.remove("hidemekeepspace");
+            document.getElementById('resultsButton').classList.add("active");
         }else{
-            document.getElementById('searchButton').classList.add("hidemekeepspace");
+            //document.getElementById('searchButton').classList.add("hidemekeepspace");
+            document.getElementById('resultsButton').classList.remove("active");
         }
     }
 }
 
 function showArrows() {
+    //const leftArrow = document.getElementById('arrowLeft');
+    //const rightArrow = document.getElementById('arrowRight');
     document.getElementById('arrowLeft').classList.remove("hidden");
     document.getElementById('arrowRight').classList.remove("hidden");
+    resetInactivityTimer();  // Start or reset the inactivity timer
 }
 function hideArrows() {
     document.getElementById('arrowLeft').classList.add("hidden");
     document.getElementById('arrowRight').classList.add("hidden");
+}
+
+// Function to reset and start the inactivity timer
+function resetInactivityTimer() {
+    // Clear any existing timer
+    clearTimeout(inactivityTimer);
+    // Set a new timer to hide arrows after 10 seconds (10000 milliseconds)
+    inactivityTimer = setTimeout(hideArrows, 5000);
 }
 
 function hideSearch() {
@@ -201,15 +235,19 @@ function handleIndexClick(element, event) {
 }
 
 function indexButtonClick() {
-    fromArea = activeArea;
-    activeArea = "songArea";
-    displayScreen();
+    if(document.getElementById('listButton').classList.contains("active")){
+        fromArea = activeArea;
+        activeArea = "songArea";
+        displayScreen();
+    }
 }
 
 function searchButtonClick() { 
-    fromArea = activeArea;
-    activeArea = "resultsArea";
-    displayScreen();
+    if(document.getElementById('resultsButton').classList.contains("active")){
+        fromArea = activeArea;
+        activeArea = "resultsArea";
+        displayScreen();
+    }
 }
 
 function findButtonClick() {
@@ -325,6 +363,10 @@ function swipeRight(){
         }else{
             showToast("This is the first song.");
         }
+        displayScreen();
+        if(indexThisSong < 2){   // first song in book
+            document.getElementById('arrowLeft').classList.add("hidden");  // hide button right
+        }
     }
 }
 
@@ -337,6 +379,10 @@ function swipeLeft(){
             setCurrentSong(previousSong.number);
         }else{
             showToast("This is the last song.");
+        }
+        displayScreen();
+        if(indexThisSong > songs.length - 3){   // last song in book
+            document.getElementById('arrowRight').classList.add("hidden");  // hide button right
         }
     }   
 }

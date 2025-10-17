@@ -11,19 +11,24 @@
 
     <body>
         <!-- Navigation Arrows -->
-        <div class="nav-arrow nav-arrow.hidden" id="arrowLeft">
-            <svg viewBox="0 0 24 24">
-                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-            </svg>
+        <div class="nav-arrow hidden" id="arrowLeft">
+             <div class="arrow-circle">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" fill="white"/>
+                </svg>
+            </div>
         </div>
-        <div class="nav-arrow nav-arrow.hidden" id="arrowRight">
-            <svg viewBox="0 0 24 24">
-                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-            </svg>
+        <div class="nav-arrow hidden" id="arrowRight">
+            <div class="arrow-circle">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" fill="white"/>
+                </svg>
+            </div>
         </div>
         
         <div id="headerContainer">
             <div id="inputContainer" class="fixed-header">
+                <!--<span class="searchIcon">🔍</span>-->
                 <input id="myInput" type="search" placeholder="Search: number or text">
                 <button id="findButton" class="hideme">Find</button>
             </div>
@@ -35,7 +40,7 @@
             </div>
 
             <div id="resultsArea">
-                <h1>Found</h1>
+                <h1>Results</h1>
                 <div id="results">
                 </div>
             </div>
@@ -44,11 +49,22 @@
                 <div class="oneline">
                     <button id="indexButton" class="myButton">List</button>
                     <div id="lyricNumber">Lyrics</div>
-                    <button id="searchButton" class="myButton">Found</button>
+                    <button id="searchButton" class="myButton">Results</button>
                 </div>
                 <div id="lyrics">
                 </div>
             </div>
+        </div>
+
+        <div class="tab-bar">
+            <button id="listButton" class="tab-btn" data-tab="list">
+                <span class="icon">📜</span>
+                <span class="label">List</span>
+            </button>
+            <button id="resultsButton" class="tab-btn" data-tab="search">
+                <span class="icon">🔍</span>
+                <span class="label">Search Results</span>
+            </button>
         </div>
 
         <div id="toast" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:12px 20px; border-radius:25px; display:none; z-index:1000;"></div>

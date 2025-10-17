@@ -36,7 +36,8 @@ body {
 
 /* for the search box */
 #myInput {
-  display: block;
+  /* display: block; */
+  flex: 1;
   width: 100%;
   padding: 1rem;
   padding-left: 2.5rem;
@@ -169,13 +170,15 @@ h1 {
 }
 
 /* Dynamic content styles */
-#content {
+.content {
+    padding: 15px 15px 60px 15px; /* extra bottom padding for tab bar */
+    /*
     margin-top: 20px;
-    padding: 15px;
     border: 1px solid #ddd;
     border-radius: 4px;
     min-height: 100px;
     width: auto;
+    */
 }
 
 .dynamic-item {
@@ -264,14 +267,15 @@ It needs to viewable when we have scrollable content
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     z-index: 1000;
     transition: transform 0.3s ease; /* Smooth hide/show animation */
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-/*
-.content {
-    margin-top: 70px; 
-    transition: margin-top 0.3s ease;
+.searchIcon {
+    display: inline-flex;
+    align-items: center;
 }
-*/
 
 .bigtopmargin {
     margin-top: 80px; /* Increased margin when header is fixed */
@@ -280,24 +284,18 @@ It needs to viewable when we have scrollable content
 /* Navigation Arrows */
 .nav-arrow {
     position: fixed;
-    top: 50%;
+    top: 85%;
     transform: translateY(-50%);
-    width: 60px;
-    height: 100px;
-    background: rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     cursor: pointer;
     z-index: 1000;
-    transition: all 0.3s ease;
+    transition: 0.3s ease;
     border: none;
-    opacity: 0.7;
+    opacity: 0.6;
 }
 
-.nav-arrow:hover {
-    background: rgba(0, 0, 0, 0.6);
-    opacity: 1;
+.nav-arrow:hover .arrow-circle{
+    transform: scale(1.1);
+    background-color: rgba(0, 0, 0, 0.8);
 }
 
 .nav-arrow svg {
@@ -308,12 +306,10 @@ It needs to viewable when we have scrollable content
 
 #arrowLeft {
     left: 20px;
-    border-radius: 0 8px 8px 0;
 }
 
 #arrowRight {
     right: 20px;
-    border-radius: 8px 0 0 8px;
 }
 
 /* Hide arrows when not needed (optional) */
@@ -321,3 +317,61 @@ It needs to viewable when we have scrollable content
     display: none;
 }
 
+/* The circular arrow icon */
+.arrow-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px; /* Circle size */
+    height: 48px; /* Circle size */
+    background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black circle */
+    border-radius: 50%; /* Makes it circular */
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Subtle shadow for depth */
+}
+
+.tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: #fff;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.tab-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+    flex: 1;
+}
+
+.tab-btn.active {
+    opacity: 1;
+}
+
+.tab-btn .icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.tab-btn .label {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.tab-btn:hover {
+    opacity: 0.8;
+}
