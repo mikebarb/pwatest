@@ -1,9 +1,14 @@
+// Add version parameter to force update
+const APP_VERSION = '1.0.0'; // Change this when you update
+
 // Your main application logic goes here
 let num = 0;
 let songs;
 let currentSong = 1;
 let activeArea = "songArea";  // which area is currently displayed - index, search, etc.
 let fromArea = "";  // where the current display came from - index, search, etc.
+let minFontSize = 8;
+let maxFontSize = 48;
 
 // Routines for detecting swipes.
 let startX, startY, endX, endY;
@@ -11,27 +16,42 @@ let startX, startY, endX, endY;
 // Variable to hold the timer
 let inactivityTimer; 
 
-// Get DOM elements for scanner code
-
-// Variables to hold the arrow elements
-//const leftArrow = document.querySelector('.left-arrow');
-//const rightArrow = document.querySelector('.right-arrow');
-
 //window.appGlobalMap = new Map(); // For browser
 let songMapByNumber = new Map();
-// Add version parameter to force update
-//const SW_VERSION = '2.0'; // Change this when you update
-//navigator.serviceWorker.register('/sw.js?v=' + SW_VERSION);
 
-const SW_VERSION = ' 2.13'; // Change this when you update
+// Construct Service Worker URL with version parameter
+const APP_URL = './sw.js?v=' + APP_VERSION;
+
 // Service Worker Registration
 function registerServiceWorker() {
+    console.log('Registering Service Worker with URL:', APP_URL);
     if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          console.log('Active SW registrations:', registrations.length);
+          registrations.forEach(reg => {
+            console.log('SW scope:', reg.scope);
+            console.log('SW state:', reg.active?.state);
+          });
+        });
         window.addEventListener('load', () => {
-            //navigator.serviceWorker.register('./sw.js')
-            navigator.serviceWorker.register('/sw.js?v=' + SW_VERSION)
+            navigator.serviceWorker.register(APP_URL)
                 .then(registration => {
+                    // Send version to SW after registration
+                    if (registration.active) {
+                        registration.active.postMessage({
+                            type: 'SET_VERSION',
+                            version: APP_VERSION
+                        });
+                    }
+                    // Also send to waiting SW if any
+                    if (registration.waiting) {
+                        registration.waiting.postMessage({
+                            type: 'SET_VERSION', 
+                            version: APP_VERSION
+                        });
+                    }
                     // Optional: Check for updates
+                    console.log('SW registered:', registration);
                     registration.update();
                 })
                 .catch(registrationError => {
@@ -45,6 +65,7 @@ function registerServiceWorker() {
 
 // Example function
 function initializeApp() {
+    console.log('Initializing App');
     // Register Service Worker
     registerServiceWorker();
 
@@ -73,14 +94,17 @@ function initializeApp() {
 
     document.getElementById('arrowLeft').addEventListener('click', swipeRight);
     document.getElementById('arrowRight').addEventListener('click', swipeLeft);
-    //rightArrow.addEventListener('click', goToNextPage);
 
+    document.getElementById('fontIncreaseButton').addEventListener('click', increaseFontSize);
+    document.getElementById('fontDecreaseButton').addEventListener('click', decreaseFontSize);
+
+    // Pick up clicks in the index / list area or the results area
     // Notes:
     // event.target = element actually clicked
     // event.currentTarget = element where the event listener is
     // event.target.closest('.parent-class') = closest element going up the dom tree from target element
     document.addEventListener('click', function(event) {
-        // In index area? - nearest ancestor with class 'item'
+        // In index / list area? - nearest ancestor with class 'item'
         let clickedElement = event.target.closest('.item');
         if (clickedElement) {
             fromArea = "songArea";
@@ -121,15 +145,22 @@ function initializeApp() {
 }
 
 function displayScreen(){
-    if (activeArea === "songArea"){      // index area - list of songs
+    if (activeArea === "songArea"){      // index / list area - list of songs
         showSearch();
         hideArrows();
+
+        // fontButtons
+        document.getElementById('fontButtons').classList.add("hideme");
+        document.getElementById('fontButtons').classList.remove("fontButtonsClass");
+        //document.querySelectorAll('.fontResizeBtn').forEach(button => {
+        //    button.classList.add("hideme");
+        //    button.classList.remove("fontResizeBtn");
+        //});
         document.getElementById('listButton').classList.remove("active");
-        //document.getElementById('resultsButton').classList.remove("active");
         if (document.getElementById('results').children.length > 0) {   // Search results has content
             //document.getElementById('searchButton').classList.remove("hidemekeepspace");
             document.getElementById('resultsButton').classList.add("active");
-        }else{
+        }else{ 
             //document.getElementById('searchButton').classList.add("hidemekeepspace");
             document.getElementById('resultsButton').classList.remove("active");
         }
@@ -139,18 +170,38 @@ function displayScreen(){
         const thisElement = document.getElementById('s' + currentSong);
         if(thisElement){
             viewElement(thisElement);
+            //thisElement.focus();
         }
+        //document.getElementById('myInput').focus();
+        //document.getElementById('myInput').blur();
+        //document.activeElement.blur();                 // is the body at this point
+        //document.getElementById('myInput').focus();
     }else if (activeArea === "resultsArea"){   // search results
         showSearch();
         hideArrows();
+        // fontButtons
+        document.getElementById('fontButtons').classList.add("hideme");
+        document.getElementById('fontButtons').classList.remove("fontButtonsClass");   
+        //document.querySelectorAll('.fontResizeBtn').forEach(button => {
+        //    button.classList.add("hideme");
+        //    button.classList.remove("fontResizeBtn");
+        //});
         document.getElementById('listButton').classList.add("active");
         document.getElementById('resultsButton').classList.remove("active");
         document.getElementById('songArea').classList.add("hideme");
         document.getElementById('resultsArea').classList.remove("hideme");
         document.getElementById('lyricsArea').classList.add("hideme");
+        //document.getElementById('myInput').focus();
     }else if (activeArea === "lyricsArea"){
         hideSearch();
         showArrows();
+        //fontButtons
+        document.getElementById('fontButtons').classList.remove("hideme");
+        document.getElementById('fontButtons').classList.add("fontButtonsClass");
+        //document.querySelectorAll('.fontResizeBtn').forEach(button => {
+        //    button.classList.remove("hideme");
+        //    button.classList.add("fontResizeBtn");
+        //});
         document.getElementById('listButton').classList.add("active");
         document.getElementById('songArea').classList.add("hideme");
         document.getElementById('resultsArea').classList.add("hideme");
@@ -158,13 +209,13 @@ function displayScreen(){
         window.scrollTo(0, 0);    // scroll to top of page
         document.getElementById('indexButton').classList.add("hidemekeepspace");
         document.getElementById('searchButton').classList.add("hidemekeepspace");
-        if (document.getElementById('results').children.length > 0) {   // Search results has content
+        //if (document.getElementById('results').children.length > 0) {   // Search results has content
             //document.getElementById('searchButton').classList.remove("hidemekeepspace");
             document.getElementById('resultsButton').classList.add("active");
-        }else{
+        //}else{
             //document.getElementById('searchButton').classList.add("hidemekeepspace");
-            document.getElementById('resultsButton').classList.remove("active");
-        }
+            //document.getElementById('resultsButton').classList.remove("active");
+        //}
     }
 }
 
@@ -223,6 +274,7 @@ function setCurrentSong(num){
     }
 }
 
+// This is clicking on a item in the index / list page.
 function handleIndexClick(element, event) {
     // Extract the song number from the ID (assuming ID format is 's<number>')
     // Use the Map for rapid lookup by ID - map created during data initialisation
@@ -234,6 +286,7 @@ function handleIndexClick(element, event) {
     displayScreen();
 }
 
+// This is the index / list  button in the tab bar at the bottom of the Lyrics page
 function indexButtonClick() {
     if(document.getElementById('listButton').classList.contains("active")){
         fromArea = activeArea;
@@ -242,14 +295,24 @@ function indexButtonClick() {
     }
 }
 
+// This is the search button in the tab bar at the bottom of the Lyrics page
+// Very different to the find button which does the actual searching
 function searchButtonClick() { 
     if(document.getElementById('resultsButton').classList.contains("active")){
-        fromArea = activeArea;
-        activeArea = "resultsArea";
-        displayScreen();
+        if (document.getElementById('results').children.length > 0) {   // Search results has content
+            fromArea = activeArea;
+            activeArea = "resultsArea";
+            displayScreen();
+        } else {   // no search results - go to index
+            fromArea = activeArea;
+            activeArea = "songArea";
+            displayScreen();
+        }
     }
 }
 
+// The main search function triggered by the Find button
+// and the enter key in the search text field
 function findButtonClick() {
     const inputVal = document.getElementById('myInput').value;
     if (inputVal.length == 0){    // search text is blank.
@@ -353,6 +416,39 @@ function createIndexElement(thisSong) {
     return newElement;
 }
 
+function addLyricElement(thisSong) {
+    //currentSong = thisSong.number;
+    setCurrentSong(thisSong.number);
+    const newElement = createLyricElement(thisSong);
+    document.getElementById('lyrics').innerHTML = '';  // Clear previous lyrics
+    document.getElementById('lyricNumber').innerHTML = thisSong.number;  // Insert new song number
+    document.getElementById('lyrics').appendChild(newElement);    
+}
+
+function createLyricElement(thisSong) {
+    const newElement = document.createElement('div');
+    //var thisElement = document.createElement('h1');
+    //thisElement.textContent = thisSong.number; // add the verse line
+    //newElement.appendChild(thisElement);
+    for (const thisVerse of thisSong.verses) {
+        for (const thisLine of thisVerse) {
+            var thisElement = document.createElement('p');
+            if (thisLine.startsWith("  ")) {
+                thisElement.classList.add('doubleindentme');
+            }else if (thisLine.startsWith(" ")) {
+                thisElement.classList.add('indentme');
+            }else{    // no spaces at start of line
+                thisElement.classList.add('indentme');
+            }
+            thisElement.textContent = thisLine; // add the verse line
+            newElement.appendChild(thisElement);
+        }
+        newElement.lastElementChild.classList.add('verseLastLine');  // put  margin below this.
+    }
+    newElement.className = 'verses';
+    return newElement;
+}
+
 function swipeRight(){
     if (activeArea === "lyricsArea"){
         const indexThisSong = songs.findIndex(song => song.number === currentSong); 
@@ -387,39 +483,6 @@ function swipeLeft(){
     }   
 }
 
-function addLyricElement(thisSong) {
-    //currentSong = thisSong.number;
-    setCurrentSong(thisSong.number);
-    const newElement = createLyricElement(thisSong);
-    document.getElementById('lyrics').innerHTML = '';  // Clear previous lyrics
-    document.getElementById('lyricNumber').innerHTML = thisSong.number;  // Insert new song number
-    document.getElementById('lyrics').appendChild(newElement);    
-}
-
-function createLyricElement(thisSong) {
-    const newElement = document.createElement('div');
-    //var thisElement = document.createElement('h1');
-    //thisElement.textContent = thisSong.number; // add the verse line
-    //newElement.appendChild(thisElement);
-    for (const thisVerse of thisSong.verses) {
-        for (const thisLine of thisVerse) {
-            var thisElement = document.createElement('p');
-            if (thisLine.startsWith("  ")) {
-                thisElement.classList.add('doubleindentme');
-            }else if (thisLine.startsWith(" ")) {
-                thisElement.classList.add('indentme');
-            }else{    // no spaces at start of line
-                thisElement.classList.add('indentme');
-            }
-            thisElement.textContent = thisLine; // add the verse line
-            newElement.appendChild(thisElement);
-        }
-        newElement.lastElementChild.classList.add('verseLastLine');  // put  margin below this.
-    }
-    newElement.className = 'verses';
-    return newElement;
-}
-
 function loadInitialData() {
     // Load initial content or make API calls
     fetch('./book.json')
@@ -435,8 +498,6 @@ function loadInitialData() {
         .catch(error => console.error('Error loading JSON:', error));
 }
 
-// Routines for detecting swipes.
-
 // Toast notification
 function showToast(message, duration = 3000) {
     const toast = document.getElementById('toast');
@@ -447,6 +508,31 @@ function showToast(message, duration = 3000) {
         toast.style.display = 'none';
     }, duration);
 }
+
+// Adjust the font size of the lyrics area
+function increaseFontSize() {
+    const element = document.getElementById('lyricsArea');
+    const computedStyle = window.getComputedStyle(element);
+    let currentFontSize = parseFloat(computedStyle.fontSize);
+    if (currentFontSize < maxFontSize) {
+        currentFontSize += 2;
+        element.style.fontSize = currentFontSize + 'px';
+        // maintain line height ratio
+        element.style.lineHeight = (currentFontSize * 1.6667) + 'px'; 
+    }
+};
+
+function decreaseFontSize() {
+    const element = document.getElementById('lyricsArea');
+    const computedStyle = window.getComputedStyle(element);
+    let currentFontSize = parseFloat(computedStyle.fontSize);
+    if (currentFontSize > minFontSize) {
+        currentFontSize -= 2;
+        element.style.fontSize = currentFontSize + 'px';
+        // maintain line height ratio
+        element.style.lineHeight = (currentFontSize * 1.6667) + 'px'; 
+    }
+};
 
 // Fuzzy Search and Highlighting Class
 // Handles an array of hashes
